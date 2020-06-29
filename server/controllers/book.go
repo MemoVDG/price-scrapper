@@ -77,5 +77,4 @@ func DeleteBook(c *gin.Context) {
 	models.DB.Delete(&book)
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
-
 }

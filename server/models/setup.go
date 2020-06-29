@@ -7,6 +7,7 @@ import (
 
 var DB *gorm.DB
 
+// ConnectDataBase : Starting the DB
 func ConnectDataBase() {
 	database, err := gorm.Open("sqlite3", "test.db")
 
@@ -15,6 +16,7 @@ func ConnectDataBase() {
 	}
 
 	database.AutoMigrate(&Book{})
+	database.AutoMigrate(&Product{})
 
 	DB = database
 }

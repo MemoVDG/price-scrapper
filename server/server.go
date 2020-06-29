@@ -20,5 +20,11 @@ func main() {
 	r.PATCH("/books/:id", controllers.UpdateBook)
 	r.DELETE("/books/:id", controllers.DeleteBook)
 
+	// API Products
+	r.GET("/products", controllers.FindProducts)
+	r.POST("/products", controllers.CreateProduct)
+	r.GET("/products/:id", controllers.FindProductByID)
+	r.DELETE("/products/:id", controllers.DeleteProduct)
+
 	r.Run()
 }
