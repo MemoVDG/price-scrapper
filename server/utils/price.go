@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly"
 )
 
 // AmazonProduct : Get the prices in the Amazon url
-func AmazonProduct(url string) (string, string) {
+func AmazonProduct(url string) (string, string, string) {
 	// Create a collector
 	m := colly.NewCollector()
-	var regularPrice, discountPrice string
+	var regularPrice, discountPrice, productName string
 
 	// Find the div section with the price
 	m.OnHTML("#price", func(e *colly.HTMLElement) {
@@ -38,6 +39,10 @@ func AmazonProduct(url string) (string, string) {
 		discountPrice = priceSection.Find("#priceblock_dealprice").Text()
 	})
 
+	m.OnHTML("#productTitle", func(e *colly.HTMLElement) {
+		productName = strings.TrimSpace(e.Text)
+	})
+
 	// Set error handler
 	m.OnError(func(r *colly.Response, err error) {
 		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
@@ -46,19 +51,27 @@ func AmazonProduct(url string) (string, string) {
 	// Start scraping
 	m.Visit(url)
 	fmt.Println(regularPrice, discountPrice)
-	return regularPrice, discountPrice
+	return regularPrice, discountPrice, productName
 }
 
 // MercadoLibreProduct : Get the prices in the ML url
-func MercadoLibreProduct(url string) (string, string) {
+func MercadoLibreProduct(url string) (string, string, string) {
 	// Create a collector
 	m := colly.NewCollector()
 	var regularPrice, discountPrice string
+	var pricing []string
+	var productName string
 
 	// Set HTML callback
 	// Won't be called if error occurs
 	m.OnHTML("span.price-tag-fraction", func(e *colly.HTMLElement) {
-		regularPrice = e.Text
+		pricing = append(pricing, e.Text)
+	})
+
+	// Get the name of the product
+	m.OnHTML("h1.item-title__primary ", func(e *colly.HTMLElement) {
+		text := strings.TrimSpace(e.Text)
+		productName = text
 	})
 
 	// Set error handler
@@ -68,13 +81,15 @@ func MercadoLibreProduct(url string) (string, string) {
 
 	// Start scraping
 	m.Visit(url)
+	regularPrice = pricing[0]
+	discountPrice = pricing[1]
 
-	return regularPrice, discountPrice
+	return regularPrice, discountPrice, productName
 
 }
 
 // LiverpoolProduct : Get the prices in the Liverpool url
-func LiverpoolProduct(url string) (string, string) {
+func LiverpoolProduct(url string) (string, string, string) {
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -91,8 +106,8 @@ func LiverpoolProduct(url string) (string, string) {
 	defer cancel()
 
 	// run task list
-	var discountPrice, regularPrice string
-	err := chromedp.Run(ctx, getPrices(&discountPrice, &regularPrice, url))
+	var discountPrice, regularPrice, productName string
+	err := chromedp.Run(ctx, getProductInformation(&discountPrice, &regularPrice, &productName, url))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,14 +117,15 @@ func LiverpoolProduct(url string) (string, string) {
 	}
 
 	fmt.Print(regularPrice, discountPrice)
-	return regularPrice, discountPrice
+	return regularPrice, discountPrice, productName
 }
 
-func getPrices(discountPrice, regularPrice *string, url string) chromedp.Tasks {
+func getProductInformation(discountPrice, regularPrice, productName *string, url string) chromedp.Tasks {
 	return chromedp.Tasks{
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("//div[@class='m-product__price--collection']", chromedp.BySearch),
 		chromedp.Evaluate("document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline') ? document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline').innerText : 'False'", regularPrice),
 		chromedp.Evaluate("document.querySelector('p.a-product__paragraphDiscountPrice.m-0.d-inline').innerText", discountPrice),
+		chromedp.Evaluate("document.querySelector('h1.a-product__information--title').innerText", productName),
 	}
 }

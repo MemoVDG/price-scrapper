@@ -5,11 +5,12 @@ package models
 // Product : Product structure
 type Product struct {
 	ID            uint   `json:"id" gorm:"primary_key"`
+	User          string `json:"user"`
 	URL           string `json:"url"`
+	ProductName   string `json:"productName"`
 	Store         string `json:"store"`
 	RegularPrice  string `json:"regularPrice"`
-	DiscountPrice string `json:"oldPrice"`
-	User          string `json:"user"`
+	DiscountPrice string `json:"discountPrice"`
 }
 
 // CreateProduct : Basic structure for a new product

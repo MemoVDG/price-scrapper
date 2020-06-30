@@ -20,7 +20,7 @@ func FindProducts(c *gin.Context) {
 // CreateProduct : Add a new product to the DB
 func CreateProduct(c *gin.Context) {
 	var input models.CreateProduct
-	var regularPrice, discountPrice string
+	var regularPrice, discountPrice, productName string
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -28,16 +28,16 @@ func CreateProduct(c *gin.Context) {
 
 	// Analize product
 	if input.Store == "Amazon" {
-		regularPrice, discountPrice = price.AmazonProduct(input.URL)
+		regularPrice, discountPrice, productName = price.AmazonProduct(input.URL)
 	} else if input.Store == "MercadoLibre" {
-		regularPrice, discountPrice = price.MercadoLibreProduct(input.URL)
+		regularPrice, discountPrice, productName = price.MercadoLibreProduct(input.URL)
 	} else {
-		regularPrice, discountPrice = price.LiverpoolProduct(input.URL)
+		regularPrice, discountPrice, productName = price.LiverpoolProduct(input.URL)
 	}
 
 	fmt.Println(regularPrice, discountPrice)
 	// Create Product
-	product := models.Product{URL: input.URL, User: input.User, RegularPrice: regularPrice, DiscountPrice: discountPrice, Store: input.Store}
+	product := models.Product{URL: input.URL, User: input.User, RegularPrice: regularPrice, DiscountPrice: discountPrice, Store: input.Store, ProductName: productName}
 	models.DB.Create(&product)
 
 	c.JSON(http.StatusOK, gin.H{"data": product})
