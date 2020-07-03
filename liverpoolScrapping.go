@@ -12,7 +12,7 @@ import (
 
 func main() {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", false),
+		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", false),
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("disable-extensions", false),
@@ -36,17 +36,17 @@ func main() {
 		regularPrice = discountPrice
 	}
 
-	fmt.Print(regularPrice, discountPrice, productName)
+	fmt.Println(regularPrice, discountPrice)
 
 }
 
 func getProductInformation(discountPrice, regularPrice, productName *string) chromedp.Tasks {
 	return chromedp.Tasks{
-		chromedp.Navigate("https://www.liverpool.com.mx/tienda/pdp/bolsa-crossbody-steve-madden-amarilla-capitonada/1080852653"),
-		//chromedp.Navigate("https://www.liverpool.com.mx/tienda/pdp/horno-de-microondas-ge-profile-2.2-pies-cúbicos-acero-peb7227andd/1088752577"),
+		chromedp.Navigate("https://www.liverpool.com.mx/tienda/pdp/mary-jane-lisa-baby-room-para-bebé/19600051"),
+		//chromedp.Navigate("https://www.liverpool.com.mx/tienda/pdp/bolsa-crossbody-steve-madden-amarilla-capitonada/1080852653"),
 		chromedp.WaitVisible("//div[@class='m-product__price--collection']", chromedp.BySearch),
-		chromedp.Evaluate("document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline') ? document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline').innerText : 'False'", regularPrice),
-		chromedp.Evaluate("document.querySelector('p.a-product__paragraphDiscountPrice.m-0.d-inline').innerText", discountPrice),
+		chromedp.Evaluate("document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline') ? document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline').childNodes[1].nodeValue.replace(',','') + '' : 'False'", regularPrice),
+		chromedp.Evaluate("document.querySelector('p.a-product__paragraphDiscountPrice.m-0.d-inline').childNodes[1].nodeValue.replace(',','') + ''", discountPrice),
 		chromedp.Evaluate("document.querySelector('h1.a-product__information--title').innerText", productName),
 	}
 }

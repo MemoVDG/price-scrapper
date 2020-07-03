@@ -11,7 +11,7 @@ import (
 func main() {
 	r := gin.Default()
 
-	models.ConnectDataBase()
+	models.ConnectDataBase("test.db")
 
 	r.GET("/books", controllers.FindBooks)
 	r.GET("/books/:id", controllers.FindBookByID)

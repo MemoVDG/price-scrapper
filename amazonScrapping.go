@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/gocolly/colly"
@@ -11,14 +12,14 @@ func main() {
 	// Create a collector
 	m := colly.NewCollector()
 	var regularPrice, discountPrice string
+	var re = regexp.MustCompile("[$,]")
 
 	// Find the div section with the price
 	m.OnHTML("#price", func(e *colly.HTMLElement) {
 		priceSection := e.DOM
-
 		// Case when the regular price un underline and there is a discount
 		if priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text() != "" {
-			regularPrice = priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text()
+			regularPrice = re.ReplaceAllString(priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text(), "")
 
 			// TODO --
 			// There are some products that you need to chose the size or some option
@@ -28,11 +29,11 @@ func main() {
 
 		// Case when is the only prices and the product does not have discount
 		if priceSection.Find("#priceblock_ourprice").Text() != "" {
-			regularPrice = priceSection.Find("#priceblock_ourprice").Text()
+			regularPrice = re.ReplaceAllString(priceSection.Find("#priceblock_ourprice").Text(), "")
 		}
 
 		// Case when the element has a discount
-		discountPrice = priceSection.Find("#priceblock_dealprice").Text()
+		discountPrice = re.ReplaceAllString(priceSection.Find("#priceblock_dealprice").Text(), "")
 	})
 
 	m.OnHTML("#productTitle", func(e *colly.HTMLElement) {

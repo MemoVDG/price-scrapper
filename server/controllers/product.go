@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 
 	"../models"
 	price "../utils"
@@ -20,24 +22,32 @@ func FindProducts(c *gin.Context) {
 // CreateProduct : Add a new product to the DB
 func CreateProduct(c *gin.Context) {
 	var input models.CreateProduct
-	var regularPrice, discountPrice, productName string
+	var regularPriceStr, discountPriceStr, productName string
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Analize product
-	if input.Store == "Amazon" {
-		regularPrice, discountPrice, productName = price.AmazonProduct(input.URL)
-	} else if input.Store == "MercadoLibre" {
-		regularPrice, discountPrice, productName = price.MercadoLibreProduct(input.URL)
-	} else {
-		regularPrice, discountPrice, productName = price.LiverpoolProduct(input.URL)
+	regularPriceStr, discountPriceStr, productName = price.GetPriceByStore(input.URL, input.Store)
+	fmt.Println(regularPriceStr)
+
+	regularPrice, errR := strconv.ParseFloat(regularPriceStr, 64)
+	discountPrice, errD := strconv.ParseFloat(discountPriceStr, 64)
+	if errR != nil || errD != nil {
+		regularPrice = discountPrice
+		log.Print(errR, errD)
 	}
 
-	fmt.Println(regularPrice, discountPrice)
 	// Create Product
-	product := models.Product{URL: input.URL, User: input.User, RegularPrice: regularPrice, DiscountPrice: discountPrice, Store: input.Store, ProductName: productName}
+	product := models.Product{
+		URL:           input.URL,
+		User:          input.User,
+		RegularPrice:  regularPrice,
+		DiscountPrice: discountPrice,
+		Store:         input.Store,
+		ProductName:   productName,
+		Periodicity:   input.Periodicity,
+	}
 	models.DB.Create(&product)
 
 	c.JSON(http.StatusOK, gin.H{"data": product})
@@ -67,5 +77,4 @@ func DeleteProduct(c *gin.Context) {
 	models.DB.Delete(&product)
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
-
 }

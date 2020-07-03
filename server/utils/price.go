@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/chromedp/chromedp"
@@ -14,6 +15,8 @@ import (
 func AmazonProduct(url string) (string, string, string) {
 	// Create a collector
 	m := colly.NewCollector()
+	// Regex to remove not number characteres
+	var re = regexp.MustCompile("[$,]")
 	var regularPrice, discountPrice, productName string
 
 	// Find the div section with the price
@@ -22,8 +25,8 @@ func AmazonProduct(url string) (string, string, string) {
 
 		// Case when the regular price un underline and there is a discount
 		if priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text() != "" {
-			regularPrice = priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text()
-
+			// Remove characteres that not are a number
+			regularPrice = re.ReplaceAllString(strings.TrimSpace(priceSection.Find(".priceBlockStrikePriceString.a-text-strike").Text()), "")
 			// TODO --
 			// There are some products that you need to chose the size or some option
 			// So amazon give you a range $2,814.19 - $3,574.81
@@ -31,12 +34,19 @@ func AmazonProduct(url string) (string, string, string) {
 		}
 
 		// Case when is the only prices and the product does not have discount
-		if priceSection.Find("#priceblock_ourprice").Text() != "" {
-			regularPrice = priceSection.Find("#priceblock_ourprice").Text()
+		if priceSection.Find("#priceblock_saleprice").Text() != "" {
+			discountPrice = re.ReplaceAllString(strings.TrimSpace(priceSection.Find("#priceblock_saleprice").Text()), "")
+		}
+		if priceSection.Find("#priceblock_dealprice").Text() != "" {
+			// Case when the element has a discount
+			discountPrice = re.ReplaceAllString(strings.TrimSpace(priceSection.Find("#priceblock_dealprice").Text()), "")
 		}
 
-		// Case when the element has a discount
-		discountPrice = priceSection.Find("#priceblock_dealprice").Text()
+		if priceSection.Find("#priceblock_ourprice").Text() != "" {
+			discountPrice = re.ReplaceAllString(strings.TrimSpace(priceSection.Find("#priceblock_ourprice").Text()), "")
+		}
+
+		fmt.Println(regularPrice, discountPrice)
 	})
 
 	m.OnHTML("#productTitle", func(e *colly.HTMLElement) {
@@ -50,7 +60,6 @@ func AmazonProduct(url string) (string, string, string) {
 
 	// Start scraping
 	m.Visit(url)
-	fmt.Println(regularPrice, discountPrice)
 	return regularPrice, discountPrice, productName
 }
 
@@ -58,6 +67,8 @@ func AmazonProduct(url string) (string, string, string) {
 func MercadoLibreProduct(url string) (string, string, string) {
 	// Create a collector
 	m := colly.NewCollector()
+	// Regex to remove not number characteres
+	var re = regexp.MustCompile("[$,]")
 	var regularPrice, discountPrice string
 	var pricing []string
 	var productName string
@@ -81,8 +92,13 @@ func MercadoLibreProduct(url string) (string, string, string) {
 
 	// Start scraping
 	m.Visit(url)
-	regularPrice = pricing[0]
-	discountPrice = pricing[1]
+	// Remove characteres that not are a number
+	regularPrice = re.ReplaceAllString(pricing[0], "")
+	if len(pricing) > 1 {
+		discountPrice = re.ReplaceAllString(pricing[1], "")
+	} else {
+		discountPrice = regularPrice
+	}
 
 	return regularPrice, discountPrice, productName
 
@@ -116,7 +132,6 @@ func LiverpoolProduct(url string) (string, string, string) {
 		regularPrice = discountPrice
 	}
 
-	fmt.Print(regularPrice, discountPrice)
 	return regularPrice, discountPrice, productName
 }
 
@@ -124,8 +139,26 @@ func getProductInformation(discountPrice, regularPrice, productName *string, url
 	return chromedp.Tasks{
 		chromedp.Navigate(url),
 		chromedp.WaitVisible("//div[@class='m-product__price--collection']", chromedp.BySearch),
-		chromedp.Evaluate("document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline') ? document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline').innerText : 'False'", regularPrice),
-		chromedp.Evaluate("document.querySelector('p.a-product__paragraphDiscountPrice.m-0.d-inline').innerText", discountPrice),
+		chromedp.Evaluate("document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline') ? document.querySelector('p.a-product__paragraphRegularPrice.m-0.d-inline').childNodes[1].nodeValue.replace(',','') + '' : 'False'", regularPrice),
+		chromedp.Evaluate("document.querySelector('p.a-product__paragraphDiscountPrice.m-0.d-inline').childNodes[1].nodeValue.replace(',','') + '' ", discountPrice),
 		chromedp.Evaluate("document.querySelector('h1.a-product__information--title').innerText", productName),
+	}
+}
+
+// GetPriceByStore : Function used in the cron job to check the url based on the store
+func GetPriceByStore(url, store string) (string, string, string) {
+
+	switch store {
+	case "Amazon":
+		regularPrice, discountPrice, productName := AmazonProduct(url)
+		return regularPrice, discountPrice, productName
+	case "MercadoLibre":
+		regularPrice, discountPrice, productName := MercadoLibreProduct(url)
+		return regularPrice, discountPrice, productName
+	case "Liverpool":
+		regularPrice, discountPrice, productName := LiverpoolProduct(url)
+		return regularPrice, discountPrice, productName
+	default:
+		return "", "", ""
 	}
 }
