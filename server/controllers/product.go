@@ -41,12 +41,13 @@ func CreateProduct(c *gin.Context) {
 	// Create Product
 	product := models.Product{
 		URL:           input.URL,
-		User:          input.User,
+		UserID:        input.UserID,
 		RegularPrice:  regularPrice,
 		DiscountPrice: discountPrice,
 		Store:         input.Store,
 		ProductName:   productName,
 		Periodicity:   input.Periodicity,
+		UserEmail:     input.UserEmail,
 	}
 	models.DB.Create(&product)
 
